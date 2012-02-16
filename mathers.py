@@ -16,7 +16,22 @@ black    = (   0,   0,   0)
 white    = ( 255, 255, 255)
 green    = (   0, 255,   0)
 red      = ( 255,   0,   0)
-message_timeout = 3000
+
+# support numpad values
+keynum = {
+ 48:'0',256:'0'
+,49:'1',257:'1'
+,50:'2',258:'2'
+,51:'3',259:'3'
+,52:'4',260:'4'
+,53:'5',261:'5'
+,54:'6',262:'6'
+,55:'7',263:'7'
+,56:'8',264:'8'
+,57:'9',265:'9'}
+K_NUMPAD_RETURN = 271
+
+message_timeout = 1000
 
 
 def terminate():
@@ -54,7 +69,7 @@ class Question:
         self.text = '%d x %d = ?' % (a,b)
     def render(self, screen):
         if self.text:
-            font = pygame.font.Font(None, 25)
+            font = pygame.font.Font(None, 50)
             text = font.render(self.text,True,green)
             screen.blit(text, [250,250])
 
@@ -72,7 +87,7 @@ class Game:
         self.message_timeout = 0
     def update(self):
         # check if there is a new answer
-        if self.a:
+        if self.a != None:
             print "checking %d" % self.a
             if self.q.answer_is_valid(self.a):
                 self.message = "BRAVO"
@@ -92,7 +107,7 @@ class Game:
             if self.message_timeout > message_timeout:
                 self.message = None
                 self.message_timeout = 0
-        if self.q:
+        if self.q and not self.message:
             self.q.render(self.scr)
             
 if __name__ == '__main__':
@@ -113,14 +128,15 @@ if __name__ == '__main__':
                 if event.key == pygame.K_ESCAPE: # pressing escape quits
                     done=True # Flag that we are done so we exit this loop
                     break
-                for key in '0123456789':
-                    if event.key == ord(key): 
-                        user_input += key
-                if event.key == pygame.K_RETURN: 
-                    if user_input:
+                for key, char in keynum.iteritems():
+                    if event.key == key: 
+                        user_input += keynum[key]
+                if event.key == pygame.K_RETURN or event.key == K_NUMPAD_RETURN: 
+                    if user_input != '':
                         g.a = int(user_input)
                         user_input = ''
                         break
+                print event
             
         g.render()
         g.update()
