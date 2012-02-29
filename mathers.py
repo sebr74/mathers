@@ -16,6 +16,7 @@ black    = (   0,   0,   0)
 white    = ( 255, 255, 255)
 green    = (   0, 255,   0)
 red      = ( 255,   0,   0)
+yellow   = ( 255, 255,   0)
 
 # support numpad values
 keynum = {
@@ -50,27 +51,96 @@ def waitForPlayerToPressKey():
 
 
 class Question:
-    def __init__(self, question_text=None, answer=None):
-        if question_text:
-            self.text = question_text
-            self.answer = answer
+    unknowns=['ANS','FIRST','SECOND','OPERATOR']
+    operators=['+','-','*','/']
+    
+    def __init__(self):
+        self.operator = self.operators[random.randint(0,len(self.operators)-1)]
+        self.unknown = self.unknowns[random.randint(0,len(self.unknowns)-1)]
+        if self.operator == '+':
+            self.first = random.randint(1,12)
+            self.second = random.randint(1,12)
+            self.answer = self.first + self.second
+        elif self.operator == '-':
+            self.first = random.randint(1,12)
+            self.second = random.randint(1,12)
+            while self.second > self.first:
+                self.second = random.randint(1,12)
+            self.answer = self.first - self.second
+        elif self.operator == '*':
+            self.first = random.randint(1,12)
+            self.second = random.randint(1,12)
+            self.answer = self.first * self.second
+        elif self.operator == '/':
+            self.first = random.randint(4,12)
+            self.second = random.randint(1,12)
+            while self.first < self.second and self.first % self.second != 0:
+                self.second = random.randint(1,12)
+            self.answer = self.first / self.second
+
+        self.reset_text()
+        
+    def reset_text(self):
+        if self.unknown == 'FIRST':
+            self.text = '?'
+            self.valid_input = '%d' % self.first
         else:
-            self.update()
+            self.text = '%d' % self.first
+        if self.unknown == 'OPERATOR':
+            self.text += ' ?'
+            self.valid_input = '%s' % self.operator
+        else:
+            self.text += ' ' + self.operator
+        if self.unknown == 'SECOND':
+            self.text += ' ?'
+            self.valid_input = '%d' % self.second
+        else:
+            self.text += ' %d' % self.second
+        self.text += ' ='
+        if self.unknown == 'ANS':
+            self.text += ' ?'
+            self.valid_input = '%d' % self.answer
+        else:
+            self.text += ' %d' % self.answer
+        
+        self.color = green
+        self.size = 50
             
-    def answer_is_valid(self,answer):
-        if self.answer == answer:
+    def answer_is_valid(self,user_input):
+        if self.valid_input == user_input:
+            self.color = green
+            self.size = 70
             return True
         else:
+            self.reset_text()
             return False
-    def update(self):
-        a = random.randint(1,12)
-        b = random.randint(1,12)
-        self.answer = a * b
-        self.text = '%d x %d = ?' % (a,b)
+    
+    def update(self, user_input):
+        if self.unknown == 'FIRST':
+            self.text = '%s' % user_input
+        else:
+            self.text = '%d' % self.first
+        if self.unknown == 'OPERATOR':
+            self.text += ' %s' % user_input
+        else:
+            self.text += ' ' + self.operator
+        if self.unknown == 'SECOND':
+            self.text += ' %s' % user_input
+        else:
+            self.text += ' %d' % self.second
+        self.text += ' ='
+        if self.unknown == 'ANS':
+            self.text += ' %s' % user_input
+        else:
+            self.text += ' %d' % self.answer
+        
+        self.color = yellow
+        self.size = 40
+        
     def render(self, screen):
         if self.text:
-            font = pygame.font.Font(None, 50)
-            text = font.render(self.text,True,green)
+            font = pygame.font.Font(None, self.size)
+            text = font.render(self.text,True,self.color)
             screen.blit(text, [250,250])
 
 class Game:
@@ -85,18 +155,21 @@ class Game:
         self.a = None
         self.q = None
         self.message_timeout = 0
-    def update(self):
+    def update(self, user_input):
         # check if there is a new answer
         if self.a != None:
-            print "checking %d" % self.a
+            print "checking %s" % self.a
             if self.q.answer_is_valid(self.a):
                 self.message = "BRAVO"
                 self.a = None
-                self.q = Question()
             else:
                 # Oops
                 self.message =  "OOPS"
                 self.a = None
+        else:
+            if user_input != '':
+                self.q.update(user_input)
+            
     def render(self):
         self.scr.fill(black)
         if self.message:
@@ -105,9 +178,11 @@ class Game:
             self.scr.blit(text, [250,350])
             self.message_timeout += time_chunk
             if self.message_timeout > message_timeout:
+                if self.message == "BRAVO":
+                    self.q = Question()
                 self.message = None
                 self.message_timeout = 0
-        if self.q and not self.message:
+        if self.q:
             self.q.render(self.scr)
             
 if __name__ == '__main__':
@@ -133,13 +208,13 @@ if __name__ == '__main__':
                         user_input += keynum[key]
                 if event.key == pygame.K_RETURN or event.key == K_NUMPAD_RETURN: 
                     if user_input != '':
-                        g.a = int(user_input)
+                        g.a = user_input
                         user_input = ''
                         break
                 print event
             
         g.render()
-        g.update()
+        g.update(user_input)
         pygame.display.flip()
     
     pygame.quit()
