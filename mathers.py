@@ -60,7 +60,8 @@ def waitForPlayerToPressKey():
 
 class Question:
     unknowns=['ANS','FIRST','SECOND','OPERATOR']
-    operators=['+','-','*','/']
+    #operators=['+','-','*','/']
+    operators=['/']
     
     def __init__(self):
         self.operator = self.operators[random.randint(0,len(self.operators)-1)]
@@ -82,7 +83,7 @@ class Question:
         elif self.operator == '/':
             self.first = random.randint(4,12)
             self.second = random.randint(1,12)
-            while self.first < self.second and self.first % self.second != 0:
+            while (self.first < self.second) or (self.first % self.second != 0):
                 self.second = random.randint(1,12)
             self.answer = self.first / self.second
 
@@ -171,11 +172,17 @@ class Game:
         self.clk=pygame.time.Clock()
         pygame.display.set_caption("Mathers")
         self.message = u"Bienvenue à Mathers"
+        self.qcnt = 0
+        self.rightcnt = 0
         self.a = None
         self.q = None
         self.message_timeout = 0
         self.user_input = ''
         self.state = WAITING_FOR_INPUT
+        
+    def new_question(self):
+        self.qcnt+=1
+        self.q = Question()
         
     def process_events(self):
         for event in pygame.event.get():
@@ -224,11 +231,12 @@ class Game:
             self.q.color = green
             self.q.update(g.user_input)
             self.timeout = 0
+            self.rightcnt+=1
             self.state = CONGRADULATE
         elif self.state == CONGRADULATE:
             self.timeout += time_chunk
             if self.timeout > message_timeout:
-                self.q = Question()
+                self.new_question()
                 g.user_input = ''
                 self.state = WAITING_FOR_INPUT
         elif self.state == ANS_WRONG:
@@ -254,6 +262,12 @@ class Game:
                 self.message_timeout = 0
         if self.q:
             self.q.render(self.scr)
+
+        font = pygame.font.Font(None, 40)
+        
+        text = font.render('%d' % self.rightcnt + ' / ' + '%d' % self.qcnt,True,white)
+        self.scr.blit(text, [250,350])
+        
             
 if __name__ == '__main__':
     g = Game()
@@ -261,7 +275,7 @@ if __name__ == '__main__':
     g.render()
     pygame.display.flip()
     waitForPlayerToPressKey()
-    g.q = Question()
+    g.new_question()
     done=False
 
     while g.state!=QUIT:
