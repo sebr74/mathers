@@ -145,13 +145,12 @@ class Question:
         else:
             self.text += ' %d' % self.answer
         
-    def render(self, screen):
+    def render(self):
         if self.text:
             font = pygame.font.Font(None, self.size)
             text = font.render(self.text,True,self.color)
-            sx, sy = screen.get_size()
             fx, fy = font.size(self.text)
-            screen.blit(text, [sx/2-fx/2,sy/2-fy/2])
+            screen.blit(text, [screen_x/2-fx/2,screen_y/2-fy/2])
 
 # states
 WAITING_FOR_INPUT = 0
@@ -163,12 +162,17 @@ ANS_WRONG = 5
 PUNISH = 6
 QUIT = 7
 
+size=[700,500]
+screen=pygame.display.set_mode(size)
+screen_x, screen_y = screen.get_size()
+
+
 class Game:
     def __init__(self):
         pygame.init()
         # Set the height and width of the screen
         size=[700,500]
-        self.scr=pygame.display.set_mode(size)
+        self.scr=screen
         self.clk=pygame.time.Clock()
         pygame.display.set_caption("Mathers")
         self.message = u"Bienvenue à Mathers"
@@ -244,6 +248,7 @@ class Game:
             self.q.update(g.user_input)
             self.timeout = 0
             self.state = PUNISH
+            self.qcnt += 1
         elif self.state == PUNISH:
             self.timeout += time_chunk
             if self.timeout > message_timeout:
@@ -251,22 +256,24 @@ class Game:
                 self.state = WAITING_FOR_INPUT
             
     def render(self):
-        self.scr.fill(black)
+        screen.fill(black)
         if self.message:
             font = pygame.font.Font(None, 25)
             text = font.render(self.message,True,red)
-            self.scr.blit(text, [250,350])
+            screen.blit(text, [250,350])
             self.message_timeout += time_chunk
             if self.message_timeout > message_timeout:
                 self.message = None
                 self.message_timeout = 0
+        else:
+            font = pygame.font.Font(None, 40)
+            text = '%d' % self.rightcnt + ' / ' + '%d' % self.qcnt
+            text_surface = font.render(text,True,white)
+            fx, fy = font.size(text)
+            screen.blit(text_surface, [screen_x-fx,0])
         if self.q:
-            self.q.render(self.scr)
+            self.q.render()
 
-        font = pygame.font.Font(None, 40)
-        
-        text = font.render('%d' % self.rightcnt + ' / ' + '%d' % self.qcnt,True,white)
-        self.scr.blit(text, [250,350])
         
             
 if __name__ == '__main__':
