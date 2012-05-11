@@ -42,8 +42,13 @@ keynum = {
 }
 K_NUMPAD_RETURN = 271
 
-message_timeout = 1000
-
+MESSAGE_TIMEOUT = 1000
+SCREEN=0
+SCREENX = 0 
+SCREENY = 0
+TIME_CHUNK = 0
+FPS = 20
+MAXTIME_TO_ANS = 5
 
 def terminate():
     pygame.quit()
@@ -61,7 +66,9 @@ def waitForPlayerToPressKey():
 
 def load_sound(name):
     fullname = os.path.join('data', name)
-    return pygame.mixer.Sound(fullname)
+    snd = pygame.mixer.Sound(fullname)
+    snd.set_volume(0.3)
+    return snd 
 
 
 
@@ -177,6 +184,9 @@ class Question:
             self.first = self.answer
             self.answer = temp
 
+        self.time_to_answer = 0
+        self.size = 50
+        self.color = green
         self.reset_text()
         
     def reset_text(self):
@@ -201,9 +211,10 @@ class Question:
             self.valid_input = '%d' % self.answer
         else:
             self.text += ' %d' % self.answer
-        
         self.color = green
-        self.size = 50
+            
+        
+        
             
     def answer_is_valid(self,user_input):
         if self.unknown == 'OPERATOR' and (self.operator == '*' or self.operator == '/'): 
@@ -249,7 +260,9 @@ class Question:
             font = pygame.font.Font(None, self.size)
             text = font.render(self.text,True,self.color)
             fx, fy = font.size(self.text)
-            screen.blit(text, [screen_x/2-fx/2,screen_y/2-fy/2])
+            SCREEN.blit(text, [SCREENX/2-fx/2,SCREENY/2-fy/2])
+            self.time_to_answer += TIME_CHUNK            
+            self.size += 1
 
 # states
 WAITING_FOR_INPUT = 0
@@ -266,8 +279,8 @@ class Game:
     def __init__(self):
         pygame.init()
         pygame.mixer.init()
-        # Set the height and width of the screen
-        self.scr=screen
+        pygame.mixer.music.load(os.path.join('data','Beethoven.5.1.Op67.1.wav'))
+        # Set the height and width of the SCREEN
         self.clk=pygame.time.Clock()
         pygame.display.set_caption("Mathers")
         self.message = u"Bienvenue à Mathers"
@@ -334,12 +347,14 @@ class Game:
             self.timeout = 0
             self.rightcnt+=1
             self.qcnt += 1
-            self.score += self.q.score_value
+            tta_sec = int(self.q.time_to_answer/1000)
+            speed_bonus = 2*(MAXTIME_TO_ANS-tta_sec) if tta_sec < MAXTIME_TO_ANS else 1
+            self.score += self.q.score_value * speed_bonus
             self.bravo_snd.play()
             self.state = CONGRADULATE
         elif self.state == CONGRADULATE:
-            self.timeout += time_chunk
-            if self.timeout > message_timeout:
+            self.timeout += TIME_CHUNK
+            if self.timeout > MESSAGE_TIMEOUT:
                 self.new_question()
                 self.user_input = ''
                 self.state = WAITING_FOR_INPUT
@@ -351,20 +366,20 @@ class Game:
             self.oops_snd.play()
             self.state = PUNISH
         elif self.state == PUNISH:
-            self.timeout += time_chunk
-            if self.timeout > message_timeout:
+            self.timeout += TIME_CHUNK
+            if self.timeout > MESSAGE_TIMEOUT:
                 self.user_input = ''
                 self.state = WAITING_FOR_INPUT
             
     def render(self):
-        screen.fill(black)
+        SCREEN.fill(black)
         if self.message:
-            global time_chunk
+            global TIME_CHUNK
             font = pygame.font.Font(None, 25)
             text = font.render(self.message,True,red)
-            screen.blit(text, [250,350])
-            self.message_timeout += time_chunk
-            if self.message_timeout > message_timeout:
+            SCREEN.blit(text, [250,350])
+            self.message_timeout += TIME_CHUNK
+            if self.message_timeout > MESSAGE_TIMEOUT:
                 self.message = None
                 self.message_timeout = 0
         else:
@@ -372,39 +387,44 @@ class Game:
             #text = '%d' % self.rightcnt + ' / ' + '%d' % self.qcnt
             text = '%d' % self.score
             text_surface = font.render(text,True,white)
-            fx, fy = font.size(text)
-            screen.blit(text_surface, [screen_x-fx-5,5])
+            fx1, fy1 = font.size(text)
+            SCREEN.blit(text_surface, [SCREENX-fx1-5,5])
+            font = pygame.font.Font(None, 20)
+            text = '%d' % self.rightcnt + ' / ' + '%d' % self.qcnt
+            text_surface = font.render(text,True,white)
+            fx2, fy2 = font.size(text)
+            SCREEN.blit(text_surface, [SCREENX-fx2-5,5+fy1])
         if self.q:
             self.q.render()
-
-screen=0
-screen_x = 0 
-screen_y = 0
-time_chunk = 0
       
 def main():
     size=[800,600]
-    global screen
-    global screen_x, screen_y
-    screen=pygame.display.set_mode(size)
-    screen_x, screen_y = screen.get_size()
+    global SCREEN
+    global SCREENX, SCREENY
+    SCREEN=pygame.display.set_mode(size)
+    SCREENX, SCREENY = SCREEN.get_size()
         
     g = Game()
     
     g.render()
     pygame.display.flip()
     waitForPlayerToPressKey()
-    screen=pygame.display.set_mode(size)
-    screen_x, screen_y = screen.get_size()
+    SCREEN=pygame.display.set_mode(size)
+    SCREENX, SCREENY = SCREEN.get_size()
     
     g.new_question()
+    
+    pygame.mixer.music.play()
 
     while g.state!=QUIT:
-        global time_chunk
-        time_chunk = g.clk.tick(20)
+        global TIME_CHUNK
+        TIME_CHUNK = g.clk.tick(FPS)
         g.render()
         g.update()
         pygame.display.flip()
+    
+    print 'Volume is: %f' % pygame.mixer.music.get_volume()
+    pygame.mixer.music.fadeout(500)
     
     pygame.quit()
     sys.exit()
