@@ -70,6 +70,21 @@ def load_sound(name):
     snd.set_volume(0.3)
     return snd 
 
+import numpy
+
+def build_sound(names):
+    final_arr=None
+    for name in names:
+        fullname = os.path.join('data', name)
+        snd = pygame.mixer.Sound(fullname)
+        srcarr = pygame.sndarray.samples(snd)
+        if final_arr == None:
+            final_arr = srcarr
+        else:
+            final_arr = numpy.vstack((final_arr,srcarr))
+    
+    snd = pygame.sndarray.make_sound(final_arr)
+    return snd 
 
 
 import bisect
